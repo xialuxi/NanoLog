@@ -18,7 +18,7 @@
 #include <bits/algorithmfwd.h>
 #include <regex>
 #include <vector>
-
+#include <fstream>
 #include "Log.h"
 #include "GeneratedCode.h"
 
@@ -44,7 +44,7 @@ static const char* logLevelNames[] = {"(none)", "ERROR", "WARNING",
  *      True if operation succeed, false if there's not enough space
  */
 bool
-Log::insertCheckpoint(char **out, char *outLimit, bool writeDictionary) {
+Log::insertCheckpoint(char **out, char *outLimit, bool writeDictionary, Checkpoint *retCheckPoint) {
     if (static_cast<uint64_t>(outLimit - *out) < sizeof(Checkpoint))
         return false;
 
@@ -56,6 +56,15 @@ Log::insertCheckpoint(char **out, char *outLimit, bool writeDictionary) {
     ck->unixTime = std::time(nullptr);
     ck->cyclesPerSecond = PerfUtils::Cycles::getCyclesPerSec();
     ck->newMetadataBytes = ck->totalMetadataEntries = 0;
+
+    //adding by wezhu
+    if(retCheckPoint != nullptr)
+    {
+        *retCheckPoint = *ck;
+    }
+    //end of adding
+
+
 
     if (!writeDictionary)
         return true;
@@ -73,8 +82,17 @@ Log::insertCheckpoint(char **out, char *outLimit, bool writeDictionary) {
     ck->totalMetadataEntries = static_cast<uint32_t>(
             GeneratedFunctions::numLogIds);
 
+
+
+
+
+
     return true;
 }
+
+
+
+
 /**
  * Encoder constructor. The construction of an Encoder should logically
  * correlate with the start of a new log file as it will embed unique metadata
@@ -100,8 +118,13 @@ Log::Encoder::Encoder(char *buffer,
     , currentExtentSize(nullptr)
     , encodeMissDueToMetadata(0)
     , consecutiveEncodeMissesDueToMetadata(0)
+    ,fileHandler(fopen("xx.log","a"))
 {
-    assert(buffer);
+    
+     //adding by wezhu
+     printfBuf = (char *)malloc(printfBufSize);
+    //end 
+    
 
     // Start the buffer off with a checkpoint
     if (skipCheckpoint && !forceDictionaryOutput)
@@ -115,12 +138,13 @@ Log::Encoder::Encoder(char *buffer,
 
     // In virtually all cases, our output buffer should have enough
     // space to store the dictionary. If not, we fail in place.
-    if (!insertCheckpoint(&writePos, endOfBuffer, writeDictionary)) {
+    if (!insertCheckpoint(&writePos, endOfBuffer, writeDictionary, &checkPointForDumpTxtLog)) {
         fprintf(stderr, "Internal Error: Not enough space allocated for "
                         "dictionary file.\r\n");
 
         exit(-1);
     }
+
 }
 
 /**
@@ -373,8 +397,15 @@ Log::Encoder::encodeLogMsgs(char *from,
                 info.formatString, entry->fmtId);
 #endif
         char *argData = entry->argData;
+        //adding by wezhu
+        info.dumpDirectFunction(fileHandler, info ,entry,bufferId, checkPointForDumpTxtLog,&printfBuf, printfBufSize);
+        //end of adding
+
         info.compressionFunction(info.numNibbles, info.paramTypes,
                                         &argData, &writePos);
+
+
+
 
         remaining -= entry->entrySize;
         from += entry->entrySize;
@@ -1345,6 +1376,11 @@ Log::Decoder::BufferFragment::decompressNextLogStatement(FILE *outputFd,
         std::time_t absTime = wholeSeconds + checkpoint.unixTime;
         std::tm *tm = localtime(&absTime);
         strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", tm);
+
+
+
+
+        
     }
 
     if (fmtId2metadata.empty() || aggregationFn != nullptr) {

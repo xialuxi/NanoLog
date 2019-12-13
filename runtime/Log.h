@@ -25,6 +25,7 @@
 #include "Packer.h"
 #include "TestUtil.h"
 #include "Util.h"
+#include <fstream>
 
 #ifndef LOG_H
 #define LOG_H
@@ -113,6 +114,12 @@ enum ParamType : int32_t {
 // invocation sites.
 static constexpr int UNASSIGNED_LOGID = -1;
 
+namespace Log
+{
+    struct UncompressedEntry;
+    struct Checkpoint;
+};
+
 /**
  * Stores the static log information associated with a log invocation site
  * (i.e. filename/line/fmtString combination).
@@ -122,9 +129,13 @@ struct StaticLogInfo {
     // Function signature of the compression function used in the
     // non-preprocessor version of NanoLog
     typedef void (*CompressionFn)(int, const ParamType*, char**, char**);
-
+    
+    //adding by wezhu
+    typedef void (*DumpDirectFn)(FILE *, const StaticLogInfo&, Log::UncompressedEntry*,uint32_t, const Log::Checkpoint &, char **, int32_t &);
+    //end of adding
     // Constructor
     constexpr StaticLogInfo(CompressionFn compress,
+                      DumpDirectFn dumper,
                       const char* filename,
                       const uint32_t lineNum,
                       const uint8_t severity,
@@ -133,6 +144,9 @@ struct StaticLogInfo {
                       const int numNibbles,
                       const ParamType* paramTypes)
             : compressionFunction(compress)
+            //adding by wezhu
+            ,dumpDirectFunction(dumper)
+            //end of adding
             , filename(filename)
             , lineNum(lineNum)
             , severity(severity)
@@ -144,6 +158,9 @@ struct StaticLogInfo {
 
     // Stores the compression function to be used on the log's dynamic arguments
     CompressionFn compressionFunction;
+    DumpDirectFn dumpDirectFunction;
+
+
 
     // File where the log invocation is invoked
     const char *filename;
@@ -323,6 +340,8 @@ namespace Log {
         uint32_t totalMetadataEntries;
 
     } __attribute__((packed));
+
+
 
     /**
      * A DictionaryFragment contains a partial mapping of unique identifiers to
@@ -569,7 +588,11 @@ namespace Log {
 
     bool insertCheckpoint(char** out,
                           char *outLimit,
-                          bool writeDictionary);
+                          bool writeDictionary,
+                          Checkpoint *retCheckPoint
+                          );
+
+
 
     /**
      * Extracts a checkpoint from a file descriptor.
@@ -657,6 +680,14 @@ namespace Log {
                         size_t *outSize=nullptr);
 
     PRIVATE:
+
+        //adding by wezhu
+        FILE *fileHandler;
+        char * printfBuf;
+        int32_t printfBufSize = 1<<10; 
+        Checkpoint checkPointForDumpTxtLog;
+        //end of adding
+    
         bool encodeBufferExtentStart(uint32_t bufferId, bool wrapAround);
 
         // Used to store the compressed log messages and related metadata
