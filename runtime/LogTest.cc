@@ -2441,6 +2441,26 @@ compressHelper1(int numNibbles, const ParamType*, char **in, char**out)
     ++compressHelper1TimesRun;
 }
 
+//added by wezhu
+static int dumpHelper0TimesRun = 0;
+static int dumpHelper1TimesRun = 0;
+
+static void
+dumpDirectHelper0(FILE *, const StaticLogInfo&, Log::UncompressedEntry*,uint32_t, const Log::Checkpoint &, char **, int32_t &)
+{
+    ++dumpHelper0TimesRun;
+}
+
+static void
+dumpDirectHelper1(FILE *, const StaticLogInfo&, Log::UncompressedEntry*,uint32_t, const Log::Checkpoint &, char **, int32_t &)
+{
+    ++dumpHelper1TimesRun;
+}
+
+
+
+
+//end of adding
 template<typename T>
 static T*
 push(char* (&in)) {
@@ -2461,8 +2481,8 @@ TEST_F(LogTest, encodeLogMsgs_cpp17) {
     uint64_t numEventsCompressed = 0;
     std::vector<StaticLogInfo> dictionary;
     NanoLogInternal::ParamType paramTypes[10];
-    dictionary.emplace_back(&compressHelper0,nullptr, "File", 123, 0, "Hello World", 0, 0, paramTypes);
-    dictionary.emplace_back(&compressHelper1,nullptr, "FileA", 99, 2, "Hello World %s", 0, 0, paramTypes);
+    dictionary.emplace_back(&compressHelper0,dumpDirectHelper0, "File", 123, 0, "Hello World", 0, 0, paramTypes);
+    dictionary.emplace_back(&compressHelper1,dumpDirectHelper1, "FileA", 99, 2, "Hello World %s", 0, 0, paramTypes);
 
     // Case 1: early break because we haven't persisted the dictionary entries
     UncompressedEntry *ue = push<UncompressedEntry>(in);
