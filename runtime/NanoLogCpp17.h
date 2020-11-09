@@ -1,3 +1,4 @@
+#pragma once
 /* Copyright (c) 2018 Stanford University
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -1121,7 +1122,7 @@ inline void __attribute__((always_inline)) reallocateBuf(char **printfBuf, int &
 
 
 
-std::string getTimeString(uint64_t timeStamp, const Log::Checkpoint & checkPoint)
+std::string inline getTimeString(uint64_t timeStamp, const Log::Checkpoint & checkPoint)
 {
     double secondsSinceCheckpoint , nanos= 0.0;
     char timeString[0x100];
@@ -1148,7 +1149,7 @@ std::string getTimeString(uint64_t timeStamp, const Log::Checkpoint & checkPoint
     return timeStringWithNano;
 }
 
-void printfLogHeader(FILE * fHandler, const StaticLogInfo&info, Log::UncompressedEntry*entry,uint32_t threadId, const Log::Checkpoint & checkPoint)
+inline void printfLogHeader(FILE * fHandler, const StaticLogInfo&info, Log::UncompressedEntry*entry,uint32_t threadId, const Log::Checkpoint & checkPoint)
 {
     std::string timeString = getTimeString(entry->timestamp, checkPoint);
     int32_t logLevel = info.severity;
